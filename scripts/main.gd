@@ -37,6 +37,12 @@ var life_buy_button = null
 var shop_label = null
 var flash_overlay = null
 var flash_timer = 0.0
+var powerup_count = 0
+var powerup_value = 3
+var powerup_label = null
+var powerup_status_label = null
+var powerup_active = false
+var powerup_timer = 0.0
 @onready var _camera = $Camera2D
 
 func _ready():
@@ -45,6 +51,8 @@ func _ready():
     load_selected_level()
     create_status_label()
     create_timer_label()
+    create_powerup_label()
+    create_powerup_status_label()
     create_lives_label()
     create_combo_label()
     create_overlay()
@@ -53,6 +61,7 @@ func _ready():
     create_platforms()
     create_player()
     create_coins()
+    create_powerups()
     create_enemy()
     create_checkpoints()
     create_goal()
@@ -72,6 +81,20 @@ func create_timer_label():
     timer_label.size = Vector2(420, 80)
     timer_label.text = "Time: 0.0s"
     $CanvasLayer.add_child(timer_label)
+
+func create_powerup_label():
+    powerup_label = Label.new()
+    powerup_label.position = Vector2(20, 248)
+    powerup_label.size = Vector2(420, 40)
+    powerup_label.text = "Powerups: 0"
+    $CanvasLayer.add_child(powerup_label)
+
+func create_powerup_status_label():
+    powerup_status_label = Label.new()
+    powerup_status_label.position = Vector2(20, 288)
+    powerup_status_label.size = Vector2(420, 40)
+    powerup_status_label.text = "Power-up inactive"
+    $CanvasLayer.add_child(powerup_status_label)
 
 func create_lives_label():
     lives_label = Label.new()
@@ -276,19 +299,9 @@ func create_player():
     var player = player_scene.instantiate()
     player.position = Vector2(120, 300)
     player.add_to_group("player")
-    player.set_script(load("res://scripts/player.gd"))
 
-    var collision = CollisionShape2D.new()
-    var rectangle = RectangleShape2D.new()
-    rectangle.size = Vector2(28, 28)
-    collision.shape = rectangle
-    player.add_child(collision)
-
-    var visual = ColorRect.new()
-    visual.size = Vector2(28, 28)
-    visual.position = Vector2(-14, -14)
-    visual.color = Color(0.2, 0.6, 1.0)
-    player.add_child(visual)
+    if player.get_script() == null:
+        player.set_script(load("res://scripts/player.gd"))
 
     player.set_respawn_position(player.position)
     player.life_used.connect(_on_player_life_used)
@@ -319,6 +332,30 @@ func create_coins():
         coin.add_child(visual)
 
         add_child(coin)
+
+func create_powerups():
+    var powerup_scene = preload("res://scenes/coin.tscn")
+    var powerup_positions = [Vector2(520, 320), Vector2(740, 270)]
+
+    for position in powerup_positions:
+        var powerup = Area2D.new()
+        powerup.position = position
+        powerup.set_script(load("res://scripts/powerup.gd"))
+        powerup.connect("collected", Callable(self, "_on_powerup_collected"))
+
+        var collision = CollisionShape2D.new()
+        var circle = CircleShape2D.new()
+        circle.radius = 12.0
+        collision.shape = circle
+        powerup.add_child(collision)
+
+        var visual = ColorRect.new()
+        visual.size = Vector2(24, 24)
+        visual.position = Vector2(-12, -12)
+        visual.color = Color(0.3, 0.8, 1.0)
+        powerup.add_child(visual)
+
+        add_child(powerup)
 
 func create_enemy():
     var enemy_scene = preload("res://scenes/enemy.tscn")
@@ -423,6 +460,12 @@ func _process(delta):
     if Input.is_key_pressed(KEY_B):
         _toggle_shop()
 
+    if powerup_active:
+        powerup_timer = max(0.0, powerup_timer - delta)
+        if powerup_timer <= 0.0:
+            powerup_active = false
+            update_status()
+
     if game_over or paused or won:
         return
 
@@ -456,11 +499,18 @@ func update_combo_label():
 
 func update_status():
     coin_label.text = "Coins: %d / %d" % [coin_count, goal_coins]
-    score = coin_count * 100 + combo_count * 25 + int(max(0.0, 60.0 - elapsed_time))
+    score = coin_count * 100 + combo_count * 25 + powerup_count * 150 + int(max(0.0, 60.0 - elapsed_time))
     if shop_panel != null:
         update_shop_text()
     if lives_label != null:
         lives_label.text = "Lives: %d" % [extra_lives + 1]
+    if powerup_label != null:
+        powerup_label.text = "Powerups: %d" % powerup_count
+    if powerup_status_label != null:
+        if powerup_active:
+            powerup_status_label.text = "Speed boost: %.1fs" % powerup_timer
+        else:
+            powerup_status_label.text = "Power-up inactive"
     update_combo_label()
     if score > best_score:
         best_score = score
@@ -482,6 +532,16 @@ func _on_coin_collected(position):
     spawn_floating_text("+%d" % (100 * combo_count), position)
     if combo_count > 1:
         status_label.text = "Combo x%d!" % combo_count
+
+func _on_powerup_collected(position):
+    powerup_count += 1
+    powerup_active = true
+    powerup_timer = 4.0
+    update_status()
+    spawn_floating_text("Power Up!", position)
+    status_label.text = "Power-up collected! Speed boosted for 4s."
+    if player_node != null and player_node.has_method("apply_temporary_speed_boost"):
+        player_node.apply_temporary_speed_boost(1.4, 4.0)
 
 func _on_checkpoint_activated(position):
     active_checkpoint_position = position

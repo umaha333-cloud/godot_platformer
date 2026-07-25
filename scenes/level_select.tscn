@@ -36,6 +36,15 @@ offset_right = 640.0
 offset_bottom = 330.0
 text = "Level 2 - Neon Drift"
 
+[node name="PowerupNote" type="Label" parent="."]
+layout_mode = 0
+offset_left = 320.0
+offset_top = 360.0
+offset_right = 640.0
+offset_bottom = 400.0
+text = "Power-ups appear in each level to boost your speed."
+horizontal_alignment = 1
+
 [node name="BackButton" type="Button" parent="."]
 layout_mode = 0
 offset_left = 320.0

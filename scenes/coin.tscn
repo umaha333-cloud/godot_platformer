@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/coin.gd" id="1_def456"]
+
+[node name="Coin" type="Area2D"]
+script = ExtResource("res://scripts/coin.gd")
+

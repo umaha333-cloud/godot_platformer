@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_abc123"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("res://scripts/main.gd")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(480, 270)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="CanvasLayer"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 160.0
+offset_bottom = 60.0
+text = "Coins: 0"
